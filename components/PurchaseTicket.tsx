@@ -8,6 +8,7 @@ import { Ticket } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import ReleaseTicket from "./ReleaseTicket";
+import { createStripeCheckoutSession } from "@/actions/stripe/createStripeCheckoutSession";
 
 const PurchaseTicket = ({ eventId }: { eventId: Id<"events"> }) => {
   const router = useRouter();
@@ -48,8 +49,21 @@ const PurchaseTicket = ({ eventId }: { eventId: Id<"events"> }) => {
     return () => clearInterval(interval);
   }, [offerExpiresAt, isExpired]);
 
-  //   create stripe checkout
-  const handlePurchase = async () => {};
+  // *  create stripe checkout
+  const handlePurchase = async () => {
+    if (!user) return;
+    try {
+      setIsLoading(true);
+      const { sessionUrl } = await createStripeCheckoutSession({ eventId });
+
+      if (sessionUrl) {
+        router.push(sessionUrl);
+      }
+    } catch (error) {
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   if (!user || !queuePosition || queuePosition.status !== "offered")
     return null;
@@ -65,27 +79,33 @@ const PurchaseTicket = ({ eventId }: { eventId: Id<"events"> }) => {
               </div>
               <div>
                 <h3 className="text-lg font-semibold text-gray-900">
-                    Ticket Reserved
+                  Ticket Reserved
                 </h3>
                 <p className="text-sm text-gray-500">
-                    Expires in {timeRemaining}
+                  Expires in {timeRemaining}
                 </p>
               </div>
             </div>
 
             <div className="text-sm text-gray-600 leading-relaxed">
-                A ticket has been reserved for you. Complete your purchase before
-                the timer expires to secure your spot at this event.
+              A ticket has been reserved for you. Complete your purchase before
+              the timer expires to secure your spot at this event.
             </div>
           </div>
         </div>
 
-        <button className="w-full bg-gradient-to-r from-amber-500 to-amber-600 text-white px-8 py-4 rounded-lg font-bold hover:from-amber-600 hover:to-amber-700 transform hover:scale-[1.02] transition-all duration-200 shadow-sm disabled:from-gray-400 disabled:to-gray-500 disabled:cursor-not-allowed disabled:hover:scale-100 text-lg">
-            {isLoading ? "Redirecting to checkout..." : "Purchase your Ticket now ->"}
+        <button
+          onClick={handlePurchase}
+          disabled={isLoading || isExpired}
+          className="w-full bg-gradient-to-r from-amber-500 to-amber-600 text-white px-8 py-4 rounded-lg font-bold hover:from-amber-600 hover:to-amber-700 transform hover:scale-[1.02] transition-all duration-200 shadow-sm disabled:from-gray-400 disabled:to-gray-500 disabled:cursor-not-allowed disabled:hover:scale-100 text-lg"
+        >
+          {isLoading
+            ? "Redirecting to checkout..."
+            : "Purchase your Ticket now ->"}
         </button>
 
         <div className="mt-4">
-            <ReleaseTicket eventId={eventId} waitingListId={queuePosition._id} />
+          <ReleaseTicket eventId={eventId} waitingListId={queuePosition._id} />
         </div>
       </div>
     </div>
